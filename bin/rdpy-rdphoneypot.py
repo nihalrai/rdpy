@@ -40,7 +40,7 @@ class HoneyPotServer(rdp.RDPServerObserver):
         self._rssFileSizeList = rssFileSizeList
         self._dx, self._dy = 0, 0
         self._rssFile = None
-        
+
     def onReady(self):
         """
         @summary:  Event use to inform state of server stack
@@ -56,7 +56,7 @@ class HoneyPotServer(rdp.RDPServerObserver):
             rssFilePath = sorted(self._rssFileSizeList, key = lambda x: abs(x[0][0] * x[0][1] - size))[0][1]
             log.info("select file (%s, %s) -> %s"%(width, height, rssFilePath))
             self._rssFile = rss.createReader(rssFilePath)
-        
+
         domain, username, password = self._controller.getCredentials()
         hostname = self._controller.getHostname()
         log.info("""Credentials:
@@ -66,46 +66,46 @@ class HoneyPotServer(rdp.RDPServerObserver):
         \thostname : %s
         """%(domain, username, password, hostname));
         self.start()
-        
+
     def onClose(self):
         """ HoneyPot """
-        
+
     def onKeyEventScancode(self, code, isPressed, isExtended):
         """ HoneyPot """
-    
+
     def onKeyEventUnicode(self, code, isPressed):
         """ HoneyPot """
-        
+
     def onPointerEvent(self, x, y, button, isPressed):
         """ HoneyPot """
-        
+
     def start(self):
         self.loopScenario(self._rssFile.nextEvent())
-        
+
     def loopScenario(self, nextEvent):
         """
         @summary: main loop event
         """
         if nextEvent.type.value == rss.EventType.UPDATE:
             self._controller.sendUpdate(nextEvent.event.destLeft.value + self._dx, nextEvent.event.destTop.value + self._dy, nextEvent.event.destRight.value + self._dx, nextEvent.event.destBottom.value + self._dy, nextEvent.event.width.value, nextEvent.event.height.value, nextEvent.event.bpp.value, nextEvent.event.format.value == rss.UpdateFormat.BMP, nextEvent.event.data.value)
-            
+
         elif nextEvent.type.value == rss.EventType.CLOSE:
             self._controller.close()
             return
-            
+
         elif nextEvent.type.value == rss.EventType.SCREEN:
             self._controller.setColorDepth(nextEvent.event.colorDepth.value)
             #compute centering because we cannot resize client
             clientSize = nextEvent.event.width.value, nextEvent.event.height.value
             serverSize = self._controller.getScreen()
-            
+
             self._dx, self._dy = (max(0, serverSize[0] - clientSize[0]) / 2), max(0, (serverSize[1] - clientSize[1]) / 2)
             #restart connection sequence
             return
-        
+
         e = self._rssFile.nextEvent()
         reactor.callLater(float(e.timestamp.value) / 1000.0, lambda:self.loopScenario(e))
-        
+
 class HoneyPotServerFactory(rdp.ServerFactory):
     """
     @summary: Factory on listening events
@@ -118,7 +118,7 @@ class HoneyPotServerFactory(rdp.ServerFactory):
         """
         rdp.ServerFactory.__init__(self, 16, privateKeyFilePath, certificateFilePath)
         self._rssFileSizeList = rssFileSizeList
-        
+
     def buildObserver(self, controller, addr):
         """
         @param controller: {rdp.RDPServerController}
@@ -127,7 +127,7 @@ class HoneyPotServerFactory(rdp.ServerFactory):
         """
         log.info("Connection from %s:%s"%(addr.host, addr.port))
         return HoneyPotServer(controller, self._rssFileSizeList)
-    
+
 def readSize(filePath):
     """
     @summary: read size event in rss file
@@ -140,24 +140,24 @@ def readSize(filePath):
             return None
         elif e.type.value == rss.EventType.SCREEN:
             return e.event.width.value, e.event.height.value
-    
+
 def help():
     """
     @summary: Print help in console
     """
-    print """
+    print ("""
     Usage:  rdpy-rdphoneypot.py rss_filepath(1..n)
-            [-l listen_port default 3389] 
-            [-k private_key_file_path (mandatory for SSL)] 
-            [-c certificate_file_path (mandatory for SSL)] 
-    """
-    
+            [-l listen_port default 3389]
+            [-k private_key_file_path (mandatory for SSL)]
+            [-c certificate_file_path (mandatory for SSL)]
+    """)
+
 if __name__ == '__main__':
     listen = "3389"
     privateKeyFilePath = None
     certificateFilePath = None
     rssFileSizeList = []
-    
+
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hl:k:c:")
     except getopt.GetoptError:
@@ -172,13 +172,13 @@ if __name__ == '__main__':
             privateKeyFilePath = arg
         elif opt == "-c":
             certificateFilePath = arg
-    
+
     #build size map
     log.info("Build size map")
     for arg in args:
         size = readSize(arg)
         rssFileSizeList.append((size, arg))
         log.info("(%s, %s) -> %s"%(size[0], size[1], arg))
-    
+
     reactor.listenTCP(int(listen), HoneyPotServerFactory(rssFileSizeList, privateKeyFilePath, certificateFilePath))
     reactor.run()

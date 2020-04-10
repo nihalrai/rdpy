@@ -21,7 +21,7 @@
 Fake widget
 """
 from rdpy.core.error import CallPureVirtualFuntion
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore
 
 
 class KeyCode(object):
@@ -43,14 +43,14 @@ class IRender(object):
         @param dy: delta y
         """
         raise CallPureVirtualFuntion("%s:%s defined by interface %s"%(self.__class__, "translate", "IRender"))
-    
+
     def drawImage(self, image):
         """
         Draw QImage
         @param image: QImage
         """
         raise CallPureVirtualFuntion("%s:%s defined by interface %s"%(self.__class__, "drawImage", "IRender"))
-    
+
     def getImageFormat(self):
         """
         @return: Image format use for render
@@ -91,13 +91,13 @@ class Anchor(IView):
         self._x = x
         self._y = y
         self._view = view
-        
+
     def keyEvent(self, code):
         self._view.keyEvent(code)
-        
+
     def pointerEvent(self, x, y, button):
         self._view.pointerEvent(x - self._x, y - self._y)
-        
+
     def update(self, render, force = False):
         render.translate(self._x, self._y)
         self._view.update(render, force)
@@ -117,7 +117,7 @@ class List(IView):
         self._current = 0
         self._callback = callback
         self._needUpdate = False
-    
+
     def keyEvent(self, code):
         #enter key
         if len(self._labels) == 0:
@@ -130,10 +130,10 @@ class List(IView):
         elif code == KeyCode.UP:
             self._current = max(0, self._current - 1)
             self._needUpdate = True
-    
+
     def pointerEvent(self, x, y, button):
         pass
-        
+
     def update(self, render, force = False):
         """
         Draw GUI that list active session
@@ -141,7 +141,7 @@ class List(IView):
         if not force and not self._needUpdate:
             return
         self._needUpdate = False
-        
+
         i = 0
         drawArea = QtGui.QImage(self._width, self._height, render.getImageFormat())
         #fill with background Color
@@ -152,12 +152,12 @@ class List(IView):
                 if i == self._current:
                     qp.setPen(QtCore.Qt.darkGreen)
                     qp.drawRoundedRect(rect, 5.0, 5.0)
-                qp.setPen(QtCore.Qt.white)  
+                qp.setPen(QtCore.Qt.white)
                 qp.setFont(QtGui.QFont('arial', self._fontSize, QtGui.QFont.Bold))
                 qp.drawText(rect, QtCore.Qt.AlignCenter, label)
                 i += 1
         render.drawImage(drawArea)
-        
+
 class Window(IView):
     def __init__(self, width, height, backgroundColor = QtCore.Qt.black):
         self._views = []
@@ -183,7 +183,7 @@ class Window(IView):
             render.drawImage(drawArea)
         for view in self._views:
             view.update(render, force)
-            
+
 class Label(IView):
     def __init__(self, label, width, height, font = QtGui.QFont(), fontColor = QtCore.Qt.white, backgroundColor = QtCore.Qt.black):
         self._label = label
@@ -192,7 +192,7 @@ class Label(IView):
         self._font = font
         self._fontColor = fontColor
         self._backgroundColor = backgroundColor
-        
+
     def keyEvent(self, code):
         """
         Nothing to do
@@ -217,7 +217,7 @@ class Label(IView):
         drawArea.fill(self._backgroundColor)
         with QtGui.QPainter(drawArea) as qp:
             qp.setFont(self._font)
-            qp.setPen(self._fontColor) 
+            qp.setPen(self._fontColor)
             qp.drawText(drawArea.rect(), QtCore.Qt.AlignCenter, self._label)
         render.drawImage(drawArea)
 
@@ -230,7 +230,7 @@ class RDPRenderer(IRender):
         self._colorDepth = controller.getColorDepth()
         self._dx = 0
         self._dy = 0
-        
+
     def getImageFormat(self):
         if self._colorDepth == 15:
             return QtGui.QImage.Format_RGB15
@@ -240,11 +240,11 @@ class RDPRenderer(IRender):
             return QtGui.QImage.Format_RGB24
         elif self._colorDepth == 32:
             return QtGui.QImage.Format_RGB32
-        
+
     def translate(self, dx, dy):
         self._dx += dx
         self._dy += dy
-        
+
     def drawImage(self, image):
         """
         Render of widget
@@ -256,4 +256,3 @@ class RDPRenderer(IRender):
             ptr = tmp.bits()
             ptr.setsize(tmp.byteCount())
             self._controller.sendUpdate(self._dx, i + self._dy, image.width() + self._dx - 1, i + self._dy, tmp.width(), tmp.height(), self._colorDepth, False, ptr.asstring())
-        

@@ -23,13 +23,13 @@ example of use rdpy as VNC client
 """
 
 import sys, os, getopt
-from PyQt4 import QtGui
-from rdpy.ui.qt4 import RFBClientQt
+from PyQt5 import QtGui, QtWidgets
+from rdpy.ui.qt5 import RFBClientQt
 from rdpy.protocol.rfb import rfb
 
 import rdpy.core.log as log
 log._LOG_LEVEL = log.Level.INFO
-        
+
 class RFBClientQtFactory(rfb.ClientFactory):
     """
     @summary: Factory create a VNC GUI client
@@ -39,7 +39,7 @@ class RFBClientQtFactory(rfb.ClientFactory):
         @param password: password for VNC authentication
         """
         self._password = password
-        
+
     def buildObserver(self, controller, addr):
         """
         @summary: Build RFB Client observer
@@ -55,7 +55,7 @@ class RFBClientQtFactory(rfb.ClientFactory):
         self._w.setWindowTitle('rdpy-vncclient')
         self._w.show()
         return client
-        
+
     def clientConnectionLost(self, connector, reason):
         """
         @summary: Connection lost event
@@ -65,7 +65,7 @@ class RFBClientQtFactory(rfb.ClientFactory):
         QtGui.QMessageBox.warning(self._w, "Warning", "Lost connection : %s"%reason)
         reactor.stop()
         app.exit()
-        
+
     def clientConnectionFailed(self, connector, reason):
         """
         @summary: Connection failed event
@@ -75,12 +75,12 @@ class RFBClientQtFactory(rfb.ClientFactory):
         QtGui.QMessageBox.warning(self._w, "Warning", "Connection failed : %s"%reason)
         reactor.stop()
         app.exit()
-        
+
 if __name__ == '__main__':
-    
+
     #default script argument
     password = ""
-    
+
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hp:")
     except getopt.GetoptError:
@@ -91,18 +91,24 @@ if __name__ == '__main__':
             sys.exit()
         elif opt == "-p":
             password = arg
-            
+
     if ':' in args[0]:
         ip, port = args[0].split(':')
     else:
         ip, port = args[0], "5900"
-        
+
     #create application
-    app = QtGui.QApplication(sys.argv)
-    
+    app = QtWidgets.QApplication(sys.argv)
+
     #add qt4 reactor
-    import qt4reactor
-    qt4reactor.install()
+    try:
+        import qt5reactor
+        qt5reactor.install()
+    except:
+        if "twisted.internet.reactor" in sys.modules:
+            del sys.modules["twisted.internet.reactor"]
+        import qt5reactor
+        qt5reactor.install()
 
     from twisted.internet import reactor
     reactor.connectTCP(ip, int(port), RFBClientQtFactory(password))

@@ -24,10 +24,10 @@ take screenshot of login page
 """
 
 import sys, os, getopt
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from rdpy.protocol.rfb import rfb
 import rdpy.core.log as log
-from rdpy.ui.qt4 import qtImageFormatFromRFBPixelFormat
+from rdpy.ui.qt5 import qtImageFormatFromRFBPixelFormat
 from twisted.internet import task
 
 #set log level
@@ -46,7 +46,7 @@ class RFBScreenShotFactory(rfb.ClientFactory):
         RFBScreenShotFactory.__INSTANCE__ += 1
         self._path = path
         self._password = password
-        
+
     def clientConnectionLost(self, connector, reason):
         """
         @summary: Connection lost event
@@ -58,7 +58,7 @@ class RFBScreenShotFactory(rfb.ClientFactory):
         if(RFBScreenShotFactory.__INSTANCE__ == 0):
             reactor.stop()
             app.exit()
-        
+
     def clientConnectionFailed(self, connector, reason):
         """
         @summary: Connection failed event
@@ -70,8 +70,8 @@ class RFBScreenShotFactory(rfb.ClientFactory):
         if(RFBScreenShotFactory.__INSTANCE__ == 0):
             reactor.stop()
             app.exit()
-        
-        
+
+
     def buildObserver(self, controller, addr):
         """
         @summary: build ScreenShot observer
@@ -90,7 +90,7 @@ class RFBScreenShotFactory(rfb.ClientFactory):
                 rfb.RFBClientObserver.__init__(self, controller)
                 self._path = path
                 self._buffer = None
-                
+
             def onUpdate(self, width, height, x, y, pixelFormat, encoding, data):
                 """
                 Implement RFBClientObserver interface
@@ -110,9 +110,9 @@ class RFBScreenShotFactory(rfb.ClientFactory):
                 with QtGui.QPainter(self._buffer) as qp:
                 #draw image
                     qp.drawImage(x, y, image, 0, 0, width, height)
-                
+
                 self._controller.close()
-                
+
             def onReady(self):
                 """
                 @summary: callback use when RDP stack is connected (just before received bitmap)
@@ -120,27 +120,27 @@ class RFBScreenShotFactory(rfb.ClientFactory):
                 log.info("connected %s"%addr)
                 width, height = self._controller.getScreen()
                 self._buffer = QtGui.QImage(width, height, QtGui.QImage.Format_RGB32)
-            
+
             def onClose(self):
                 """
                 @summary: callback use when RDP stack is closed
                 """
                 log.info("save screenshot into %s"%self._path)
                 self._buffer.save(self._path)
-        
+
         controller.setPassword(self._password)
         return ScreenShotObserver(controller, self._path)
-        
+
 def help():
-    print "Usage: rdpy-vncscreenshot [options] ip[:port]"
-    print "\t-o: file path of screenshot default(/tmp/rdpy-vncscreenshot.jpg)"
-    print "\t-p: password for VNC Session"
-        
+    print ("Usage: rdpy-vncscreenshot [options] ip[:port]")
+    print ("\t-o: file path of screenshot default(/tmp/rdpy-vncscreenshot.jpg)")
+    print ("\t-p: password for VNC Session")
+
 if __name__ == '__main__':
     #default script argument
     path = "/tmp/"
     password = ""
-    
+
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hp:o:")
     except getopt.GetoptError:
@@ -153,24 +153,32 @@ if __name__ == '__main__':
             path = arg
         elif opt == "-p":
             password = arg
-        
+
     #create application
-    app = QtGui.QApplication(sys.argv)
-    
+    app = QtWidgets.QApplication(sys.argv)
+
     #add qt4 reactor
-    import qt4reactor
-    qt4reactor.install()
+
+    try:
+        import qt5reactor
+        qt5reactor.install()
+    except:
+        if "twisted.internet.reactor" in sys.modules:
+            del sys.modules["twisted.internet.reactor"]
+        import qt5reactor
+        qt5reactor.install()
+
     from twisted.internet import reactor
 
-    
-    for arg in args:      
+
+    for arg in args:
         if ':' in arg:
             ip, port = arg.split(':')
         else:
             ip, port = arg, "5900"
-        
+
         reactor.connectTCP(ip, int(port), RFBScreenShotFactory(password, path + "%s.jpg"%ip))
-        
-    
+
+
     reactor.runReturn()
     app.exec_()
